@@ -2,7 +2,7 @@
 import sys
 from optparse import OptionParser
 import os
-
+#neco
 pnt=0
 tapepnt=0
 tape=[0]
