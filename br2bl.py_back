@@ -30,87 +30,65 @@ if not options.filout:
 	print("Zadejte výstupní soubor")
 	exit(2)
 print(len(istr))
-sd=math.ceil(math.sqrt(len(istr)))+1
+sd=math.ceil(math.sqrt(len(istr)))
 print("Šířka ",end='')
 print(sd)
 print("Délka vstupu ",end='')
 print(len(istr))
 print()
 print(math.pow(sd,2))
-i=0 #pozice v instr
-r=0 #radek
-p=0 #posuvnik pro cerpani z textu
-rst="" #kam se bude výsledke ukládat
-sud=0; #lichosudost řádku
-tmp="";
-#šírka řádku je sd
-#dokud mám znaky ve vstupu, vkladam do vysledku
-while i < len(istr):
-	print (i,end='')
-	print (":",end='')
-	print (istr[i],end='')
-	print (" ",end='')
-	i+=1
-print()
 i=0
-print(istr)
-print("sd*sd ",end='')
-print(sd*sd)
-while i < (sd*sd):
-	if r == 0:
-		if i < sd:
-			if p >= len(istr):
-				rst+="X"
+r=0
+rst=""
+otoc=0;
+while i < math.pow(sd,2):
+	if r == 0: # nultý řádek
+		if (math.fmod(i,sd) == 0) and (i > 0): # konec nultého řádku	
+			rst+=istr[i]
+			rst=rst+'P'
+			rst=rst+'\n'
+			rst=rst+'L'
+			r+=1
+			otoc=1
+		else:
+			if i < len(istr):
+				rst=rst+istr[i]
 			else:
-				if istr[p] != '\n':
-					rst+=istr[p]
-					p+=1
-				else:
-					p+=1
-		elif i == sd:
-			if p >= len(istr):
-				rst+="X"
+				rst=rst+'X'
+	else: # ostatni radky
+		if math.fmod(i,(sd)) == 0:
+			rst+=istr[i]
+			rst=rst+'P'
+			rst=rst+'\n'
+			rst=rst+'L'
+			r+=1
+			if otoc == 1:
+				#zacatek radku: rst[-sd] konec rst [-1]
+				tmr=rst[0:-sd-2]
+				#print(tmr)
+				tmp=rst[-sd-2:-3]
+				tmp=tmp[::-1]
+				tme=rst[-3:-1]+'L'
+				#print(tme)
+				rst=tmr+tmp+tme				
+				otoc=0
 			else:
-				if sud == 1:
-					tmp=rst[-(sd-1):][::-1]
-					istr=istr[0:-(sd-1)]+tmp
-				rst+="P\nL"
-				r+=1
-				sud=1
-	else:		
-		if math.fmod(i,sd+1) == sd-1:
-			if p >= len(istr):
-				rst+="X"
+				otoc=1
+		else:
+			if i < len(istr) -1 :
+				rst=rst+istr[i]
 			else:
-				if sud == 1:
-					tmp=rst[-(sd-1):][::-1]
-					istr=istr[0:-(sd-1)]+tmp
-					print(tmp)
-					#tmp=rst[-(sd-1):]
-					#print(tmp[::-1])						#VSECHNO FUNGUJE AŽ NA REVERZE U POSLEDNÍ ŘÁDKY, DEAL WITH IT!
-				rst+="P\nL"
-				if sud == 0:
-					sud=1
-				else:
-					sud=0
-		elif math.fmod(i,sd+1) < sd:
-			if p >= len(istr):
-				rst+="X"
-			else:
-				if istr[p] != '\n':
-					rst+=istr[p]
-					p+=1
-				else:
-					p+=1 
+				rst=rst+'X'	
 	i+=1
+rst=rst+'X'
 rst+='\n'
 print(rst)
-print("velikost:",end='')
 print(len(rst))
+
 j=0
 i=0
 s=0
-size = sd+1
+size = sd
 pixels = []
 line=[]
 while s < len(rst):
