@@ -84,11 +84,12 @@ while i < (sd*sd):
 			else:
 				if sud == 1:
 					tmp=rst[-(sd-1):][::-1]
-					istr=istr[0:-(sd-1)]+tmp
-					print(tmp)
+					rst=rst[0:-(sd-1)]+tmp
+					#print(tmp)
 					#tmp=rst[-(sd-1):]
 					#print(tmp[::-1])						#VSECHNO FUNGUJE AŽ NA REVERZE U POSLEDNÍ ŘÁDKY, DEAL WITH IT!
-				rst+="P\nL"
+				if p < len(istr):
+					rst+="P\nL"
 				if sud == 0:
 					sud=1
 				else:
@@ -103,6 +104,10 @@ while i < (sd*sd):
 				else:
 					p+=1 
 	i+=1
+if sud == 1:
+	tmp=rst[-(sd+1):][::-1]
+	rst=rst[0:-(sd+1)]+tmp
+	rst=rst[:-1]+'P'
 rst+='\n'
 print(rst)
 print("velikost:",end='')
