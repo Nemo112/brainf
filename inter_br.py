@@ -116,5 +116,5 @@ while pnt < len(istr):
 		elif tape[tapepnt] == 0:
 			pnt=brstack.pop()
 	else:
-		pnt+=1	
+		pnt+=1
 print();
