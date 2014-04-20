@@ -7,42 +7,42 @@ import zlib
 #Definice pro getchary a putchary
 class Unbuffered(object):
    def __init__(self, stream):
-       self.stream = stream
+	   self.stream = stream
    def write(self, data):
-       self.stream.write(data)
-       self.stream.flush()
+	   self.stream.write(data)
+	   self.stream.flush()
    def __getattr__(self, attr):
-       return getattr(self.stream, attr)
+	   return getattr(self.stream, attr)
 sys.stdout = Unbuffered(sys.stdout)
 
 class _Getch:
-    def __init__(self):
-        try:
-            self.impl = _GetchWindows()
-        except ImportError:
-            self.impl = _GetchUnix()
-    def __call__(self): return self.impl()
+	def __init__(self):
+		try:
+			self.impl = _GetchWindows()
+		except ImportError:
+			self.impl = _GetchUnix()
+	def __call__(self): return self.impl()
 
 class _GetchUnix:
-    def __init__(self):
-        import tty, sys
-    def __call__(self):
-        import sys, tty, termios
-        fd = sys.stdin.fileno()
-        old_settings = termios.tcgetattr(fd)
-        try:
-            tty.setraw(sys.stdin.fileno())
-            ch = sys.stdin.read(1)
-        finally:
-            termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
-        return ch
+	def __init__(self):
+		import tty, sys
+	def __call__(self):
+		import sys, tty, termios
+		fd = sys.stdin.fileno()
+		old_settings = termios.tcgetattr(fd)
+		try:
+			tty.setraw(sys.stdin.fileno())
+			ch = sys.stdin.read(1)
+		finally:
+			termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
+		return ch
 
 class _GetchWindows:
-    def __init__(self):
-        import msvcrt
-    def __call__(self):
-        import msvcrt
-        return msvcrt.getch()
+	def __init__(self):
+		import msvcrt
+	def __call__(self):
+		import msvcrt
+		return msvcrt.getch()
 
 getch = _Getch()
 
@@ -50,96 +50,158 @@ def putchar(n):
 	print(chr(n), end='')
 
 def giveSymb(symbol):
-	if symbol==(255,0,0,255):
+	if symbol==(255,0,0):
 		return(">")
-	elif symbol==(128,0,0,255):
+	elif symbol==(128,0,0):
 		return("<")
-	elif symbol==(0,255,0,255):
+	elif symbol==(0,255,0):
 		return("+")
-	elif symbol==(0,128,0,255):
+	elif symbol==(0,128,0):
 		return("-")
-	elif symbol==(0,0,255,255):
+	elif symbol==(0,0,255):
 		return(".")
-	elif symbol==(0,0,128,255):
+	elif symbol==(0,0,128):
 		return(",")
-	elif symbol==(255,255,0,255):
+	elif symbol==(255,255,0):
 		return("[")
-	elif symbol==(128,128,0,255):
+	elif symbol==(128,128,0):
 		return("]")
-	elif symbol==(0,255,255,255):
+	elif symbol==(0,255,255):
 		return("P")
-	elif symbol==(0,128,128,255):
+	elif symbol==(0,128,128):
 		return("L")
 	else:
 		return("X")
 def load_png_image(image):
-    """Return width and height of PNG image
+	"""Return width and height of PNG image
 
-    Args:
-        image: reference to PNG file
-    Returns:
-        (width, height) tuple
-    """
+	Args:
+		image: reference to PNG file
+	Returns:
+		(width, height) tuple
+	"""
 
-    # precte hlavicku obrazku
-    head = image.read(8)
-    # zkontroluje, ze se jedna o hlavicku PNG obrazku
-    assert head == b'\x89PNG\r\n\x1a\n', 'File is not PNG image'
+	# precte hlavicku obrazku
+	head = image.read(8)
+	# zkontroluje, ze se jedna o hlavicku PNG obrazku
+	assert head == b'\x89PNG\r\n\x1a\n', 'File is not PNG image'
+	image.seek(4, 1)  # preskoci IHDR SIZE
+	image.seek(4, 1)  # preskoci IHDR TYPE
+	# precte sirku obrazku z IHDR data
+	width = int.from_bytes(image.read(4), 'big')
+	# precte vysku obrazku z IHDR data
+	height = int.from_bytes(image.read(4), 'big')
+	#print("Šířka " + str(width))
+	#print("Výška " + str(height))
+	#print("Bitová hloubka " + str(int.from_bytes(image.read(1), 'big')))
+	image.read(1)
+	clmode=int.from_bytes(image.read(1), 'big')
+	#print("Druh barvy "+str(clmode))
+	#print("Kompresní metoda " + str(int.from_bytes(image.read(1), 'big')))
+	#print("Filtrace " + str(int.from_bytes(image.read(1), 'big')))
+	#print("Interface " + str(int.from_bytes(image.read(1), 'big')))
+	return width, height, clmode
 
-    image.seek(4, 1)  # preskoci IHDR SIZE
-    image.seek(4, 1)  # preskoci IHDR TYPE
-    # precte sirku obrazku z IHDR data
-    width = int.from_bytes(image.read(4), 'big')
-    # precte vysku obrazku z IHDR data
-    height = int.from_bytes(image.read(4), 'big')
-
-    return width, height
-
+def plus(a,b):
+	return ((a[0]+b[0])%256,(a[1]+b[1])%256,(a[2]+b[2])%256)
+def paeth_predictor(a,b,c):
+	res = tuple()
+	for i in range(0,3):
+		p = (a[i]+b[i]-c[i]) # initial estimate
+		pa = abs(p-a[i]) # distances to a, b, c
+		pb = abs(p-b[i])
+		pc = abs(p-c[i])
+		if (pa <= pb and pa <= pc):
+			res += (a[i],)
+		elif (pb <= pc):
+			res += (b[i],)
+		else:
+			res += (c[i],)
+	return res
 def load_png_data(image, image_properties):
-    """Return PNG image pixels
+	"""Return PNG image pixels
 
-    Args:
-        image: reference to PNG file
-        image_properties: (width, height) tuple
-    Returns:
-        list of list of pixels - [[(r, g, b, a), (r, g, b, a) ...]]
-    """
+	Args:
+		image: reference to PNG file
+		image_properties: (width, height) tuple
+	Returns:
+		list of list of pixels - [[(r, g, b, a), (r, g, b, a) ...]]
+	"""
+	width = image_properties[0]
+	height = image_properties[1]
+	clmode = image_properties[2]
+	#print(clmode);
+	if clmode == 6:
+		mode=4
+	elif clmode == 2:
+		mode=3
+	# preskoci hlavicku obrazku a oznaceni IHDR - 0 znamena, ze se pozice kurzoru nastavuje od zacatku
+	image.seek(8 + 8 + 13 + 4, 0)
+	# nacte delku dat IDAT chunku
 
-    width = image_properties[0]
-    height = image_properties[1]
-    # preskoci hlavicku obrazku a oznaceni IHDR - 0 znamena, ze se pozice kurzoru nastavuje od zacatku
-    image.seek(8 + 8 + 13 + 4, 0)
-    # nacte delku dat IDAT chunku
-    data_size = int.from_bytes(image.read(4), 'big')
-    # preskoci oznaceni chunku b'IDAT'
-    image.seek(4, 1)
-    # nacte data
-    data = image.read(data_size)
-    # rozbali data v chunku IDAT
-    data = zlib.decompress(data)
+	j=0
+	sz=0
+	pc=b''
+	#print("prvni ")
+	#print(sys.getsizeof(pc))
+	#bez=sys.getsizeof(pc)
+	#print()
+	while 1:
+		data_size = int.from_bytes(image.read(4), 'big')
+		cosi=image.read(4)
+		#print("rev " + str(data_size) + "  " + str(cosi))
+		if cosi == b'IEND':
+			break
+		elif cosi != b'IDAT':
+			image.seek(data_size+4,1)
+			continue
+		pc+=(image.read(data_size))
+		image.seek(4,1)
+		#print("přečteno " + str(data_size))
+		sz+=data_size+4
+	#print(sz)
+	# rozbali data v chunku IDAT
+	data = zlib.decompress(pc)
+	#exit(2)	
+	#print("data")
+	#print(data)
+	#print("+++++++++++++++")
 
-    # do seznamu pixels se nactou vsechny radky obrazku
-    pixels = []
-    for row_index in range(height):
-        # do seznamu row se ukladaji jednotlive entice
-        # obsahujici podslozky pixelu - r, g, b, alpha channel
-        row = []
-        # nastaveni pozice na zacatek dalsiho radku
-        # kazdy pixel se sklada ze 4 bytu - proto ta ctyrka
-        # kazdy radek obsahuje na zacatek typ filtrovani
-        # a ten musime preskocit pomoci "+ row_index"
-        start = row_index * width * 4 + row_index
-        # konec je delka radku + "pocatecni pozice"
-        end = start + width * 4
-        # inkrementuje se s krokem 4 - pixel obsahuje 4 byty
-        for pixel in range(start, end, 4):
-            r = data[pixel + 1]
-            g = data[pixel + 2]
-            b = data[pixel + 3]
-            a = data[pixel + 4]
-            row.append((r, g, b, a))
-        pixels.append(row)
-    return pixels
+	# do seznamu pixels se nactou vsechny radky obrazku
+	pixels = []
+	p=0
+	#print(mode)
+	for row_index in range(height):
+		filr=data[p];
+		#print("filtr " + str(filr))
+		p+=1		
+		row = []
+		left_pixel = (0,0,0) 
+		upleft_pixel = (0,0,0)
+		for pixel in range(0,width):
+			r = data[p]
+			g = data[p + 1]
+			b = data[p + 2]
+			pxl = (r,g,b)
+			p+=mode
+			if filr == 0:
+				left_pixel=pxl
+				row.append(pxl)
+			elif filr == 1:
+				left_pixel=plus(left_pixel,pxl)
+				row.append(left_pixel)
+			elif filr == 2:
+				left_pixel=plus(pxl,pixels[len(pixels)-1][pixel])
+				row.append(left_pixel)
+			elif filr == 4:
+				up_pixel=pixels[len(pixels)-1][pixel]
+				#print(paeth_predictor(left_pixel,up_pixel,upleft_pixel))
+				current = plus(pxl,paeth_predictor(left_pixel,up_pixel,upleft_pixel))
+				row.append(current)
+				left_pixel=current
+				upleft_pixel=up_pixel
+		pixels.append(row)
+	return pixels
 
 
 def isPng(inp):
@@ -169,12 +231,12 @@ maxy=0
 with open(options.filename, 'rb') as f:
 	image_properties = load_png_image(f)
 	pixels = load_png_data(f, image_properties)
-	#print(len(pixels))
+	#print(pixels)
 	for it in pixels:
 		matr.append([]);
 		maxy=len(it)
 		for i in it:
-			#print(giveSymb(i),end="")
+			#print(i,end=" ")
 			matr[j].append(giveSymb(i));
 		#print(" r:" + str(j))
 		j+=1
