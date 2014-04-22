@@ -4,7 +4,6 @@ from optparse import OptionParser
 import os
 import zlib
 
-#Definice pro getchary a putchary
 class Unbuffered(object):
    def __init__(self, stream):
        self.stream = stream
@@ -74,33 +73,14 @@ def giveSymb(symbol):
 		return("X")
 
 def load_png_image(image):
-	"""Return width and height of PNG image
-
-	Args:
-		image: reference to PNG file
-	Returns:
-		(width, height) tuple
-	"""
-
-	# precte hlavicku obrazku
 	head = image.read(8)
-	# zkontroluje, ze se jedna o hlavicku PNG obrazku
 	assert head == b'\x89PNG\r\n\x1a\n', 'File is not PNG image'
 	image.seek(4, 1)  # preskoci IHDR SIZE
 	image.seek(4, 1)  # preskoci IHDR TYPE
-	# precte sirku obrazku z IHDR data
 	width = int.from_bytes(image.read(4), 'big')
-	# precte vysku obrazku z IHDR data
 	height = int.from_bytes(image.read(4), 'big')
-	#print("Šířka " + str(width))
-	#print("Výška " + str(height))
-	#print("Bitová hloubka " + str(int.from_bytes(image.read(1), 'big')))
 	image.read(1)
 	clmode=int.from_bytes(image.read(1), 'big')
-	#print("Druh barvy "+str(clmode))
-	#print("Kompresní metoda " + str(int.from_bytes(image.read(1), 'big')))
-	#print("Filtrace " + str(int.from_bytes(image.read(1), 'big')))
-	#print("Interface " + str(int.from_bytes(image.read(1), 'big')))
 	return width, height, clmode
 
 def plus(a,b):
@@ -120,38 +100,21 @@ def paeth_predictor(a,b,c):
 			res += (c[i],)
 	return res
 def load_png_data(image, image_properties):
-	"""Return PNG image pixels
-
-	Args:
-		image: reference to PNG file
-		image_properties: (width, height) tuple
-	Returns:
-		list of list of pixels - [[(r, g, b, a), (r, g, b, a) ...]]
-	"""
 	width = image_properties[0]
 	height = image_properties[1]
 	clmode = image_properties[2]
-	#print(clmode);
 	if clmode == 6:
 		mode=4
 	elif clmode == 2:
 		mode=3
-	# preskoci hlavicku obrazku a oznaceni IHDR - 0 znamena, ze se pozice kurzoru nastavuje od zacatku
 	image.seek(8 + 8 + 13 + 4, 0)
-	# nacte delku dat IDAT chunku
-
 
 	j=0
 	sz=0
 	pc=b''
-	#print("prvni ")
-	#print(sys.getsizeof(pc))
-	#bez=sys.getsizeof(pc)
-	#print()
 	while 1:
 		data_size = int.from_bytes(image.read(4), 'big')
 		cosi=image.read(4)
-		#print("rev " + str(data_size) + "  " + str(cosi))
 		if cosi == b'IEND':
 			break
 		elif cosi != b'IDAT':
@@ -159,24 +122,13 @@ def load_png_data(image, image_properties):
 			continue
 		pc+=(image.read(data_size))
 		image.seek(4,1)
-		#print("přečteno " + str(data_size))
 		sz+=data_size+4
-
-
-
 	data = zlib.decompress(pc)
-	
-	#print("data")
-	#print(data)
-	#print("+++++++++++++++")
-	
-	# do seznamu pixels se nactou vsechny radky obrazku
+
 	pixels = []
 	p=0
-	#print(mode)
 	for row_index in range(height):
 		filr=data[p];
-		#print("filtr " + str(filr))
 		p+=1		
 		row = []
 		left_pixel = (0,0,0) 
@@ -198,7 +150,6 @@ def load_png_data(image, image_properties):
 				row.append(left_pixel)
 			elif filr == 4:
 				up_pixel=pixels[len(pixels)-1][pixel]
-				#print(paeth_predictor(left_pixel,up_pixel,upleft_pixel))
 				current = plus(pxl,paeth_predictor(left_pixel,up_pixel,upleft_pixel))
 				row.append(current)
 				left_pixel=current
@@ -234,16 +185,12 @@ maxy=0
 with open(options.filename, 'rb') as f:
 	image_properties = load_png_image(f)
 	pixels = load_png_data(f, image_properties)
-	#print(pixels)
 	for it in pixels:
 		matr.append([]);
 		maxy=len(it)
 		for i in it:
-			print(giveSymb(i),end="")
 			matr[j].append(giveSymb(i));
-		print(" r:" + str(j))
 		j+=1
-#print(matr)
 maxx=j
 class Patf:
 	x=0
@@ -282,24 +229,26 @@ bftxt=""
 tape=[0]
 brstx=[]
 brsty=[]
+jmpx=[]
+jmpy=[]
 tapepnt=0
 o=1
 
-#print("maxy"+str(maxy)+"maxx"+str(maxx));
 x=ch.x
 y=ch.y
 while maxx>y and maxy>x and y>=0 and x>=0:
 	if matr[y][x] == "+" :
-		tape[tapepnt]+=1
+		tape[tapepnt]=(tape[tapepnt]+1)%256
 		ch.step()
 	elif matr[y][x] == "-" :
-		tape[tapepnt]-=1
+		tape[tapepnt]=(tape[tapepnt]-1)%256
 		ch.step()
 	elif matr[y][x] == "." :
 		putchar(tape[tapepnt])
 		ch.step()
 	elif matr[y][x] == "," :
 		tape[tapepnt]=ord(getch())
+		putchar(tape[tapepnt])
 		ch.step()
 	elif matr[y][x] == ">" :
 		if len(tape) - 1 == tapepnt:
@@ -310,7 +259,10 @@ while maxx>y and maxy>x and y>=0 and x>=0:
 		tapepnt-=1
 		ch.step()
 	elif matr[y][x] == "[" :
-		if tape[tapepnt] == 0:
+		if len(jmpy) > 0:
+			x=jmpx.pop()
+			y=jmpy.pop()
+		elif tape[tapepnt] == 0:
 			ch.step()						
 			x=ch.x
 			y=ch.y
@@ -335,32 +287,33 @@ while maxx>y and maxy>x and y>=0 and x>=0:
 			brsty.append(y)
 			ch.step()
 	elif matr[y][x] == "]" :
-		#if tape[tapepnt] != 0:
-		mx=x
-		ch.x=brstx.pop()
-		my=y
-		ch.y=brsty.pop()
+		if tape[tapepnt] != 0:
+			mx=x
+			ch.x=brstx.pop()
+			my=y
+			ch.y=brsty.pop()
+		elif tape[tapepnt] == 0:
+			mx=x
+			ch.x=brstx.pop()
+			my=y
+			ch.y=brsty.pop()
+			jmpy.append(y)
+			jmpx.append(x)
 
-		if my % 2 == 0 and ch.y % 2 == 1 and (ch.v == 0 or ch.v == 2):  # pokud je z lichý na sudý, změň směr, jinak ne
+		if my % 2 == 0 and ch.y % 2 == 1 and (ch.v == 0 or ch.v == 2):
 			ch.swVec()
 		elif my % 2 == 1 and ch.y % 2 == 0 and (ch.v == 0 or ch.v == 2):
 			ch.swVec()
-		elif mx % 2 == 0 and ch.x % 2 == 1 and (ch.v == 1 or ch.v == 3):  # pokud je z lichý na sudý, změň směr, jinak ne
+		elif mx % 2 == 0 and ch.x % 2 == 1 and (ch.v == 1 or ch.v == 3):
 			ch.swVec()
 		elif mx % 2 == 1 and ch.x % 2 == 0  and (ch.v == 1 or ch.v == 3):
 			ch.swVec()
-			#ch.swVec()
-		#elif tape[tapepnt] == 0:
-			#ch.x=brstx.pop()
-			#ch.y=brsty.pop()
-			#ch.swVec()
 	elif matr[y][x] == "P" :
 		ch.turnRight()
 	elif  matr[y][x] == "L" :
 		ch.turnLeft()
 	else:
 		ch.step()	
-	#print("x:" + str(x) + " y:" + str(y) + " v:" + str(ch.v) + " |" + matr[y][x])
 	x=ch.x
 	y=ch.y
 

@@ -4,7 +4,6 @@ from optparse import OptionParser
 import os
 import zlib
 
-#Definice pro getchary a putchary
 class Unbuffered(object):
    def __init__(self, stream):
        self.stream = stream
@@ -73,33 +72,14 @@ def giveSymb(symbol):
 	else:
 		return("X")
 def load_png_image(image):
-	"""Return width and height of PNG image
-
-	Args:
-		image: reference to PNG file
-	Returns:
-		(width, height) tuple
-	"""
-
-	# precte hlavicku obrazku
 	head = image.read(8)
-	# zkontroluje, ze se jedna o hlavicku PNG obrazku
 	assert head == b'\x89PNG\r\n\x1a\n', 'File is not PNG image'
 	image.seek(4, 1)  # preskoci IHDR SIZE
 	image.seek(4, 1)  # preskoci IHDR TYPE
-	# precte sirku obrazku z IHDR data
 	width = int.from_bytes(image.read(4), 'big')
-	# precte vysku obrazku z IHDR data
 	height = int.from_bytes(image.read(4), 'big')
-	#print("Šířka " + str(width))
-	#print("Výška " + str(height))
-	#print("Bitová hloubka " + str(int.from_bytes(image.read(1), 'big')))
 	image.read(1)
 	clmode=int.from_bytes(image.read(1), 'big')
-	#print("Druh barvy "+str(clmode))
-	#print("Kompresní metoda " + str(int.from_bytes(image.read(1), 'big')))
-	#print("Filtrace " + str(int.from_bytes(image.read(1), 'big')))
-	#print("Interface " + str(int.from_bytes(image.read(1), 'big')))
 	return width, height, clmode
 def plus(a,b):
 	return ((a[0]+b[0])%256,(a[1]+b[1])%256,(a[2]+b[2])%256)
@@ -118,41 +98,31 @@ def paeth_predictor(a,b,c):
 			res += (c[i],)
 	return res
 def load_png_data(image, image_properties):
-	"""Return PNG image pixels
-
-	Args:
-		image: reference to PNG file
-		image_properties: (width, height) tuple
-	Returns:
-		list of list of pixels - [[(r, g, b, a), (r, g, b, a) ...]]
-	"""
 	width = image_properties[0]
 	height = image_properties[1]
 	clmode = image_properties[2]
-	#print(clmode);
 	if clmode == 6:
 		mode=4
 	elif clmode == 2:
 		mode=3
-	# preskoci hlavicku obrazku a oznaceni IHDR - 0 znamena, ze se pozice kurzoru nastavuje od zacatku
 	image.seek(8 + 8 + 13 + 4, 0)
-	# nacte delku dat IDAT chunku
-	data_size = int.from_bytes(image.read(4), 'big')
-	#print("data size:" + str(data_size))
-	# preskoci oznaceni chunku b'IDAT'
-	image.seek(4, 1)
-	# nacte data
-	data = image.read(data_size)
-	# rozbali data v chunku IDAT
-	data = zlib.decompress(data)
-	#print("data")
-	#print(data)
-	#print("+++++++++++++++")
-	
-	# do seznamu pixels se nactou vsechny radky obrazku
+	j=0
+	sz=0
+	pc=b''
+	while 1:
+		data_size = int.from_bytes(image.read(4), 'big')
+		cosi=image.read(4)
+		if cosi == b'IEND':
+			break
+		elif cosi != b'IDAT':
+			image.seek(data_size+4,1)
+			continue
+		pc+=(image.read(data_size))
+		image.seek(4,1)
+		sz+=data_size+4
+	data = zlib.decompress(pc)
 	pixels = []
 	p=0
-	#print(mode)
 	for row_index in range(height):
 		filr=data[p];
 		#print("filtr " + str(filr))
@@ -177,7 +147,6 @@ def load_png_data(image, image_properties):
 				row.append(left_pixel)
 			elif filr == 4:
 				up_pixel=pixels[len(pixels)-1][pixel]
-				#print(paeth_predictor(left_pixel,up_pixel,upleft_pixel))
 				current = plus(pxl,paeth_predictor(left_pixel,up_pixel,upleft_pixel))
 				row.append(current)
 				left_pixel=current
@@ -192,7 +161,6 @@ def isPng(inp):
 	else:
 		return 0
 
-#Parsovani a nacitani
 parser = OptionParser(usage="usage: %prog [options] files", version="%prog 0.1")
 parser.add_option("-i","--FileInput", action="store", dest="filinp", type="string", help="Nastaveni jmena vstupniho souboru")
 parser.add_option("-o","--FileOutput", action="store", dest="filout", type="string", help="Nastaveni jmena vystupniho souboru")
@@ -217,17 +185,13 @@ maxy=0
 with open(options.filinp, 'rb') as f:
 	image_properties = load_png_image(f)
 	pixels = load_png_data(f, image_properties)
-	#print(pixels)
 	for it in pixels:
 		matr.append([]);
 		maxy=len(it)
 		for i in it:
-			#print(giveSymb(i),end="")
 			matr[j].append(giveSymb(i));
-		#print(" r:" + str(j))
 		j+=1
 maxx=j
-#print(matr)
 class Patf:
 	x=0
 	y=0
@@ -268,7 +232,6 @@ brsty=[]
 tapepnt=0
 o=1
 
-#print("maxy"+str(maxy)+"maxx"+str(maxx));
 x=ch.x
 y=ch.y
 outstr="";
@@ -284,9 +247,6 @@ while maxx>y and maxy>x and y>=0 and x>=0:
 		ch.step()
 	x=ch.x
 	y=ch.y
-print(outstr)
 fo = open(options.filout, "w")
 fo.write(outstr);
 fo.close()
-
-

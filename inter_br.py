@@ -2,15 +2,15 @@
 import sys
 from optparse import OptionParser
 import os
-#neco
+
 pnt=0
 tapepnt=0
-tape=[0]
+tape=[0]*1000
 brstack=[]
 o=1
 istr=""
+tmj=[]
 
-#Parsovani a nacitani
 parser = OptionParser(usage="usage: %prog [options] files", version="%prog 0.1")
 parser.add_option("-f","--FileName", action="store", dest="filename", type="string", help="Nastaveni jmena vstupniho souboru")
 
@@ -71,31 +71,32 @@ getch = _Getch()
 
 def putchar(n):
 	print(chr(n), end='')
-
-#parser
 while pnt < len(istr):
 	if istr[pnt] == "+" :
-		tape[tapepnt]+=1
+		tape[tapepnt]=(tape[tapepnt]+1)%256
 		pnt+=1
 	elif istr[pnt] == "-" :
-		tape[tapepnt]-=1
+		tape[tapepnt]=(tape[tapepnt]-1)%256
 		pnt+=1
 	elif istr[pnt] == "." :
 		putchar(tape[tapepnt])
 		pnt+=1
 	elif istr[pnt] == "," :
 		tape[tapepnt]=ord(getch())
+		putchar(tape[tapepnt])
 		pnt+=1
 	elif istr[pnt] == ">" :
 		if len(tape) - 1 == tapepnt:
-			tape=tape+[0]
+			tape=tape+[0]*1000
 		tapepnt+=1
 		pnt+=1
 	elif istr[pnt] == "<" :
 		tapepnt-=1
 		pnt+=1
 	elif istr[pnt] == "[" :
-		if tape[tapepnt] == 0:
+		if len(tmj) > 0:
+			pnt=tmj.pop()
+		elif tape[tapepnt] == 0:
 			pnt+=1;
 			while o > 0 :
 				if istr[pnt] == "[":
@@ -115,6 +116,7 @@ while pnt < len(istr):
 			pnt=brstack.pop()
 		elif tape[tapepnt] == 0:
 			pnt=brstack.pop()
+			tmj.append(pnt)
 	else:
 		pnt+=1
 print();
