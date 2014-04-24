@@ -151,6 +151,7 @@ while s < len(rst):
 
 img['IDAT'] = [(0, x) for x in pixels]
 
+
 img['IHDR'] = {
 	'width': len(pixels[0]).to_bytes(4, 'big'),
 	'height': len(pixels).to_bytes(4, 'big'),
@@ -174,11 +175,13 @@ ihdr_crc = zlib.crc32(b'IHDR' + ihdr_data).to_bytes(4, 'big')
 
 ihdr_size = len(ihdr_data).to_bytes(4, 'big')
 
+i=0
 idat_data = b''
 for line in img['IDAT']:
 	idat_data += bytes([line[0]])
 	for value in line[1]:
 		idat_data += bytes(value)
+		i+=1
 
 idat_data = zlib.compress(idat_data)
 idat_crc = zlib.crc32(b'IDAT' + idat_data).to_bytes(4, 'big')
