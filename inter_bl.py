@@ -108,7 +108,7 @@ def load_png_image(image):
 
 
 def plus(a, b):
-    return ((a[0]+b[0]) % 256, (a[1]+b[1]) % 256, (a[2]+b[2]) % 256)
+    return ((a[0] + b[0]) % 256, (a[1] + b[1]) % 256, (a[2] + b[2]) % 256)
 
 
 def paeth_predictor(a, b, c):
